@@ -1,23 +1,13 @@
-# Вызов библиотек
 import pygame
 import os
 import sys
 
-# Добавление персонажей
-import mushroom, turtle
-
-# import mario Марио в процессе
-
-# Инициализация pygame, экрана и времени
 pygame.init()
-size = width, height = 512, 448
+size = WIDTH, HEIGHT = 512, 448
 screen = pygame.display.set_mode(size)
 clock = pygame.time.Clock()
+pygame.time.set_timer(pygame.USEREVENT, 500)
 FPS = 60
-
-# Группы спрайтов
-all_sprites = pygame.sprite.Group()
-second_sprite = pygame.sprite.Group()
 
 
 def load_image(name, colorkey=None):
@@ -42,20 +32,6 @@ def terminate():
     sys.exit()
 
 
-bottom = pygame.transform.scale(load_image('start_bottom.png'), (width, 122))
-play2 = pygame.transform.scale(load_image('2-player.png'), (236, 16))
-play1 = pygame.transform.scale(load_image('1-player.png'), (236, 16))
-logo = pygame.transform.scale(load_image('Start_logo.png'), (352, 192))
-titles = pygame.transform.scale(load_image('titles.png'), (414, 16))
-zero = pygame.transform.scale(load_image('0.png'), (16, 16))
-crestic = pygame.transform.scale(load_image('X.png'), (16, 16))
-one = pygame.transform.scale(load_image('1.png'), (16, 16))
-hyphen = pygame.transform.scale(load_image('-.png'), (16, 16))
-three = pygame.transform.scale(load_image('3.png'), (48, 48))
-mario_intro = pygame.transform.scale(load_image('mario_intro.png'), (48, 48))
-bigcrestic = pygame.transform.scale(load_image('X.png'), (32, 32))
-
-
 def start_screen():
     screen.fill((92, 148, 252))
     mushcurs = MushroomCursor(second_sprite)
@@ -70,16 +46,25 @@ def start_screen():
                     event.type == pygame.MOUSEBUTTONDOWN:
                 return  # начинаем игру
         screen.fill((92, 148, 252))
+        bottom = pygame.transform.scale(load_image('start_bottom.png'), (WIDTH, 122))
         screen.blit(bottom, (0, 346))
+        play2 = pygame.transform.scale(load_image('2-player.png'), (236, 16))
         screen.blit(play2, (166, 322))
+        play1 = pygame.transform.scale(load_image('1-player.png'), (236, 16))
         screen.blit(play1, (166, 287))
+        logo = pygame.transform.scale(load_image('Start_logo.png'), (352, 192))
         screen.blit(logo, (82, 64))
+        titles = pygame.transform.scale(load_image('titles.png'), (414, 16))
         screen.blit(titles, (50, 26))
+        zero = pygame.transform.scale(load_image('0.png'), (16, 16))
         for i in range(6):
             screen.blit(zero, (50 + i * 16, 46))
+        crestic = pygame.transform.scale(load_image('X.png'), (16, 16))
         screen.blit(crestic, (198, 46))
         screen.blit(zero, (216, 46))
         screen.blit(zero, (232, 46))
+        one = pygame.transform.scale(load_image('1.png'), (16, 16))
+        hyphen = pygame.transform.scale(load_image('-.png'), (16, 16))
         screen.blit(one, (300, 46))
         screen.blit(hyphen, (320, 46))
         screen.blit(one, (340, 46))
@@ -130,33 +115,6 @@ class MushroomCursor(pygame.sprite.Sprite):
             self.rect = self.rect.move(0, 287 - 322)
 
 
-def intro():
-    screen.fill((0, 0, 0))
-    coin = Coin(pygame.transform.scale(load_image("coin_black.png"), (68, 16)), 4, 1, 178, 46)
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.KEYDOWN and event.key != pygame.K_UP and event.key != pygame.K_DOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
-        screen.fill((0, 0, 0))
-        screen.blit(titles, (50, 26))
-        for i in range(6):
-            screen.blit(zero, (50 + i * 16, 46))
-        screen.blit(crestic, (198, 46))
-        screen.blit(zero, (216, 46))
-        screen.blit(zero, (232, 46))
-        screen.blit(one, (300, 46))
-        screen.blit(hyphen, (320, 46))
-        screen.blit(one, (340, 46))
-        screen.blit(mario_intro, (156, 224))
-        screen.blit(bigcrestic, (226, 234))
-        screen.blit(three, (276, 229))
-        all_sprites.draw(screen)
-        pygame.display.flip()
-        clock.tick(FPS)
-
-
+all_sprites = pygame.sprite.Group()
+second_sprite = pygame.sprite.Group()
 start_screen()
-intro()
