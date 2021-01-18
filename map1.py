@@ -7,9 +7,11 @@ size = width, height = 7000, 448
 screen = pygame.display.set_mode(size)
 clock = pygame.time.Clock()
 pygame.time.set_timer(pygame.USEREVENT, 250)
-FPS = 60
+FPS = 120
 positions = open('poss.txt', encoding='utf8').readlines()
 positions = list(map(lambda x: (int(x[1:x.find(",")]), int(x[x.find(" ") + 1:x.find(")")])), positions))
+size_tile = 32
+y = height - size_tile * 2
 
 
 def load_image(name, colorkey=None):
@@ -66,8 +68,6 @@ def drawing_map():
     level = f.readlines()
     base = level[0].split()
     x = 0
-    size_tile = 32
-    y = height - size_tile * 2
     for i in range(len(base)):
         if i % 2:
             x += size_tile * int(base[i])
@@ -120,11 +120,13 @@ def drawing_map():
             elif s[0] == "?":
                 question = Question(tile_images["? block"], 4, 1, int(s[1]), int(s[2]))
             elif s[0] == "k":
-                brick = Object("brick", int(s[1]), int(s[2]))
+                brick = Object("brick", int(s[1]), int(s[2]), 1, 1)
             elif s[0] == "m":
                 mushroom = Mushroom(tile_images["mushroom"], 2, 1, int(s[1]), y - 32)
             elif s[0] == "trtl":
                 turtle = Turtle(tile_images["turtle"], 4, 1, int(s[1]), y - 48)
+            elif s[0] == "mu":
+                mushroom = Mushroom(tile_images["mushroom"], 2, 1, int(s[1]), int(s[2]))
     screen.fill((92, 148, 252))
     while True:
         for event in pygame.event.get():
@@ -205,7 +207,7 @@ class Mushroom(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(load_image("mushroom_death.png"), (32, 32))
         else:
             if not pygame.sprite.spritecollideany(self, bases_group):
-                self.gravity += 10
+                self.gravity = 16.25
                 self.v = 0
             elif self.gravity:
                 self.gravity = 0
@@ -227,7 +229,7 @@ class Turtle(pygame.sprite.Sprite):
         self.cur_frame = 0
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
-        self.v = 1
+        self.v = -1
         self.isdead = 0
         self.start_ticks = 0
 
@@ -254,11 +256,11 @@ class Turtle(pygame.sprite.Sprite):
             if pygame.sprite.spritecollideany(self, objects_group):
                 self.v = -self.v
             if self.v == 1:
-                self.cur_frame += clock.tick() / 10
+                self.cur_frame += 1
                 self.rect = self.rect.move((self.v, 0))
                 self.image = self.frames[int(self.cur_frame) % 2 + 2]
             else:
-                self.cur_frame += clock.tick() / 10
+                self.cur_frame += 1
                 self.rect = self.rect.move((self.v, 0))
                 self.image = self.frames[int(self.cur_frame) % 2]
 
