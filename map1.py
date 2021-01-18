@@ -29,10 +29,6 @@ def load_image(name, colorkey=None):
     return image
 
 
-def nothing_under(x, y, width):
-    pass
-
-
 tile_images = {
     "outworld base": pygame.transform.scale(load_image('outworld_base.png'), (32, 32)),
     "big hillock": pygame.transform.scale(load_image('big_hillock.png'), (160, 70)),
@@ -55,7 +51,8 @@ tile_images = {
     "flag": pygame.transform.scale(load_image('flag.png'), (32, 32)),
     "? block": pygame.transform.scale(load_image('question_box.png'), (136, 32)),
     "brick": pygame.transform.scale(load_image('block_outworld.png'), (32, 32)),
-    "mushroom": pygame.transform.scale(load_image('mushroom_walk.png'), (64, 32)),
+    "mushroom": pygame.transform.scale(load_image('mushroom_walk.png'), (64, 34)),
+    "turtle": pygame.transform.scale(load_image("turtle_walk.png"), (128, 50))
 }
 
 
@@ -76,8 +73,8 @@ def drawing_map():
             x += size_tile * int(base[i])
             continue
         for j in range(int(base[i])):
-            block = Object("outworld base", x, y)
-            block = Object("outworld base", x, y + size_tile)
+            block = Object("outworld base", x, y, 1, 1)
+            block = Object("outworld base", x, y + size_tile, 1, 1)
             x += size_tile
     last = level[1:]
     for j in range(len(last)):
@@ -126,6 +123,8 @@ def drawing_map():
                 brick = Object("brick", int(s[1]), int(s[2]))
             elif s[0] == "m":
                 mushroom = Mushroom(tile_images["mushroom"], 2, 1, int(s[1]), y - 32)
+            elif s[0] == "trtl":
+                turtle = Turtle(tile_images["turtle"], 4, 1, int(s[1]), y - 48)
     screen.fill((92, 148, 252))
     while True:
         for event in pygame.event.get():
@@ -136,6 +135,7 @@ def drawing_map():
                 enemy_group.update(event)
         screen.fill((92, 148, 252))
         untouchable_group.draw(screen)
+        bases_group.draw(screen)
         objects_group.draw(screen)
         animated_group.draw(screen)
         enemy_group.draw(screen)
@@ -144,9 +144,11 @@ def drawing_map():
 
 
 class Object(pygame.sprite.Sprite):
-    def __init__(self, tile_type, pos_x, pos_y, touchable=1):
-        if touchable:
+    def __init__(self, tile_type, pos_x, pos_y, touchable=1, base=0):
+        if touchable and not base:
             super().__init__(objects_group, all_sprites)
+        elif base:
+            super().__init__(bases_group, all_sprites)
         else:
             super().__init__(untouchable_group, all_sprites)
         self.image = tile_images[tile_type]
@@ -202,10 +204,12 @@ class Mushroom(pygame.sprite.Sprite):
         if args and args[0].type == pygame.KEYDOWN and args[0].key == pygame.K_UP:
             self.image = pygame.transform.scale(load_image("mushroom_death.png"), (32, 32))
         else:
-            if not pygame.sprite.spritecollideany(self, all_sprites):
-                self.gravity = 5
-            else:
+            if not pygame.sprite.spritecollideany(self, bases_group):
+                self.gravity += 10
+                self.v = 0
+            elif self.gravity:
                 self.gravity = 0
+                self.v = -500
             self.cur_frame = (self.cur_frame + 1) % len(self.frames)
             self.image = self.frames[self.cur_frame]
             if pygame.sprite.spritecollideany(self, objects_group):
@@ -215,7 +219,52 @@ class Mushroom(pygame.sprite.Sprite):
             self.rect.y += self.gravity
 
 
+class Turtle(pygame.sprite.Sprite):
+    def __init__(self, sheet, columns, rows, x, y):
+        super().__init__(all_sprites, enemy_group)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+        self.rect = self.rect.move(x, y)
+        self.v = 1
+        self.isdead = 0
+        self.start_ticks = 0
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self, *args):
+        if args and args[0].type == pygame.KEYDOWN and args[0].key == pygame.K_UP and self.isdead == 0:
+            self.image = pygame.transform.scale(load_image("death_turtle.png"), (56, 48))
+            self.start_ticks = pygame.time.get_ticks()
+            self.isdead = 1
+        if self.isdead == 1 and (pygame.time.get_ticks() - self.start_ticks) // 1000 == 3:
+            self.image = pygame.transform.scale(load_image("reborn_turtle.png"), (56, 48))
+            self.isdead = 2
+        if self.isdead == 2 and (pygame.time.get_ticks() - self.start_ticks) // 1000 == 4:
+            self.isdead = 0
+        elif not self.isdead:
+            if pygame.sprite.spritecollideany(self, objects_group):
+                self.v = -self.v
+            if self.v == 1:
+                self.cur_frame += clock.tick() / 10
+                self.rect = self.rect.move((self.v, 0))
+                self.image = self.frames[int(self.cur_frame) % 2 + 2]
+            else:
+                self.cur_frame += clock.tick() / 10
+                self.rect = self.rect.move((self.v, 0))
+                self.image = self.frames[int(self.cur_frame) % 2]
+
+
 all_sprites = pygame.sprite.Group()
+bases_group = pygame.sprite.Group()
 objects_group = pygame.sprite.Group()
 animated_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()

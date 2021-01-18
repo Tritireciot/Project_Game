@@ -1,5 +1,5 @@
 import pygame
-'''
+
 import os
 import sys
 
@@ -29,7 +29,7 @@ def load_image(name, colorkey=None):
 def terminate():
     pygame.quit()
     sys.exit()
-'''
+
 
 
 class Turtle(pygame.sprite.Sprite):
@@ -78,7 +78,7 @@ class Turtle(pygame.sprite.Sprite):
                 self.image = self.frames[int(self.cur_frame) % 2]
 
 
-'''
+
 all_sprites = pygame.sprite.Group()
 turtle = Turtle(pygame.transform.scale(load_image("turtle_walk.png"), (224, 48)), 4, 1, 100, 100)
 running = True
@@ -94,4 +94,4 @@ while running:
     clock.tick(fps)
     pygame.display.flip()
 pygame.quit()
-'''
+
