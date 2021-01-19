@@ -1,4 +1,3 @@
-'''
 import pygame
 import os
 import sys
@@ -29,9 +28,6 @@ def load_image(name, colorkey=None):
     else:
         image = image.convert_alpha()
     return image
-'''
-
-import pygame
 
 
 class Mushroom(pygame.sprite.Sprite):
@@ -67,7 +63,6 @@ class Mushroom(pygame.sprite.Sprite):
             self.image = self.frames[int(self.cur_frame) % len(self.frames)]
 
 
-'''
 all_sprites = pygame.sprite.Group()
 mushroom = Mushroom(pygame.transform.scale(load_image("mushroom_walk.png"), (92, 32)), 2, 1, 100, 100)
 running = True
@@ -83,4 +78,3 @@ while running:
     clock.tick(fps)
     pygame.display.flip()
 pygame.quit()
-'''

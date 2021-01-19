@@ -4,7 +4,7 @@ import os
 import sys
 
 # Добавление персонажей
-import mushroom, turtle
+#import mushroom, turtle
 
 # import mario Марио в процессе
 
