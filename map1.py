@@ -3,7 +3,7 @@ import os
 import sys
 
 pygame.init()
-size = width, height = 7000, 448
+size = width, height = 500, 448
 screen = pygame.display.set_mode(size)
 clock = pygame.time.Clock()
 pygame.time.set_timer(pygame.USEREVENT, 250)
@@ -54,7 +54,15 @@ tile_images = {
     "? block": pygame.transform.scale(load_image('question_box.png'), (136, 32)),
     "brick": pygame.transform.scale(load_image('block_outworld.png'), (32, 32)),
     "mushroom": pygame.transform.scale(load_image('mushroom_walk.png'), (64, 34)),
-    "turtle": pygame.transform.scale(load_image("turtle_walk.png"), (128, 50))
+    "turtle": pygame.transform.scale(load_image("turtle_walk.png"), (128, 50)),
+    "mario_jump": pygame.transform.scale(load_image("mario_jump.png"), (32, 32)),
+    "mario_jump_reversed": pygame.transform.scale(load_image("mario_jump_ry.png"), (32, 32)),
+    "mario_default_reversed": pygame.transform.scale(load_image("mario_default_reversed.png"), (24, 32)),
+    "mario_default": pygame.transform.scale(load_image("default_mario.png"), (24, 32)),
+    "mario_left_turn": pygame.transform.scale(load_image("turn_to_left.png"), (26, 32)),
+    "mario_right_turn": pygame.transform.scale(load_image("turn_to_rigth.png"), (26, 32)),
+    "mario_run": pygame.transform.scale(load_image("mario_run.png"), (204, 32)),
+
 }
 
 
@@ -127,6 +135,9 @@ def drawing_map():
                 turtle = Turtle(tile_images["turtle"], 4, 1, int(s[1]), y - 48)
             elif s[0] == "mu":
                 mushroom = Mushroom(tile_images["mushroom"], 2, 1, int(s[1]), int(s[2]))
+            elif s[0] == "mar":
+                mario = Mario(tile_images["mario_default"], tile_images["mario_run"], 6, 1, int(s[1]),
+                              y - 32)
     screen.fill((92, 148, 252))
     while True:
         for event in pygame.event.get():
@@ -136,11 +147,13 @@ def drawing_map():
                 animated_group.update()
                 enemy_group.update(event)
         screen.fill((92, 148, 252))
+        player_group.update(event)
         untouchable_group.draw(screen)
         bases_group.draw(screen)
         objects_group.draw(screen)
         animated_group.draw(screen)
         enemy_group.draw(screen)
+        player_group.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -265,6 +278,75 @@ class Turtle(pygame.sprite.Sprite):
                 self.image = self.frames[int(self.cur_frame) % 2]
 
 
+class Mario(pygame.sprite.Sprite):
+    def __init__(self, default_img, sheet, columns, rows, x, y):
+        super().__init__(player_group)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = default_img
+        self.rect = self.rect.move(x, y)
+        self.v = 1
+        self.x = x
+        self.start_ticks = 0
+        self.flag = "default"
+        self.st = 0
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self, *args):
+        if args and args[0].type == pygame.KEYUP and args[0].key == pygame.K_RIGHT and any(
+                map(lambda x: x == self.image, self.frames[3:])):
+            self.image = marimg
+            self.flag = "default"
+        elif args and args[0].type == pygame.KEYUP and args[0].key == pygame.K_RIGHT and self.flag == "left":
+            pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LEFT))
+        if args and args[0].type == pygame.KEYUP and args[0].key == pygame.K_LEFT and any(
+                map(lambda x: x == self.image, self.frames[:3])):
+            self.image = tile_images["mario_default_reversed"]
+            self.flag = "default"
+        elif args and args[0].type == pygame.KEYUP and args[0].key == pygame.K_LEFT and self.flag == "right":
+            pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT))
+
+        if (args and args[0].type == pygame.KEYDOWN and args[0].key == pygame.K_RIGHT) or self.image == rturn or \
+                args[0].type == pygame.USEREVENT and self.flag == "right":
+            if self.flag == "left" and self.image != tile_images["mario_right_turn"] and \
+                    self.image != tile_images["mario_default_reversed"]:
+                self.image = tile_images["mario_right_turn"]
+                self.start_ticks = pygame.time.get_ticks()
+                self.cur_frame = 0
+            self.flag = "right"
+            if self.start_ticks and (pygame.time.get_ticks() - self.start_ticks) / 1000 < 0.25:
+                return
+            self.start_ticks = 0
+            self.cur_frame += clock.tick() / 10
+            self.rect = self.rect.move((self.v, 0))
+            self.image = self.frames[int(self.cur_frame) % 3 + 3]
+        if args and args[0].type == pygame.KEYDOWN and args[0].key == pygame.K_LEFT or self.image == lturn or \
+                args[0].type == pygame.USEREVENT and self.flag == "left":
+            if self.flag == "right" and self.image != lturn and self.image != marimg:
+                self.image = lturn
+                self.start_ticks = pygame.time.get_ticks()
+                self.cur_frame = 0
+            self.flag = "left"
+            if self.start_ticks and (pygame.time.get_ticks() - self.start_ticks) / 1000 < 0.25:
+                return
+            self.start_ticks = 0
+            self.cur_frame += clock.tick() / 10
+            self.rect = self.rect.move((-self.v, 0))
+            self.image = self.frames[int(self.cur_frame) % 3]
+        if args and args[0].type == pygame.KEYDOWN and args[0].key == pygame.K_UP:
+            self.image = tile_images["jump"]
+            self.rect.move((0, self.v * 5))
+
+
 all_sprites = pygame.sprite.Group()
 bases_group = pygame.sprite.Group()
 objects_group = pygame.sprite.Group()
@@ -272,4 +354,9 @@ animated_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 untouchable_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
+rturn = pygame.transform.scale(load_image("turn_to_rigth.png"), (26, 32))
+lturn = pygame.transform.scale(load_image("turn_to_left.png"), (26, 32))
+marimg = pygame.transform.scale(load_image("default_mario.png"), (24, 32))
+marimgr = pygame.transform.scale(load_image("mario_default_reversed.png"), (24, 32))
+jump = pygame.transform.scale(load_image("mario_jump.png"), (32, 32))
 drawing_map()

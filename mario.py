@@ -30,13 +30,6 @@ def load_image(name, colorkey=None):
     return image
 
 
-def find_ev(s, p):
-    ind = [i for i in s if i.key == p]
-    if ind:
-        return ind[0]
-    return pygame.K_UP
-
-
 class Mario(pygame.sprite.Sprite):
     def __init__(self, default_img, sheet, columns, rows, x, y):
         super().__init__(all_sprites)
