@@ -149,7 +149,6 @@ def drawing_map():
         enemy_group.update(event)
         objects_group.update()
         mario_bases_group.update()
-        # animated_group.update()
         untouchable_group.draw(screen)
         bases_group.draw(screen)
         objects_group.draw(screen)
@@ -182,7 +181,8 @@ class Object(pygame.sprite.Sprite):
                 (self.rect.x < player_group.sprites()[0].rect.x + player_group.sprites()[0].rect.w - 2 < self.rect.x
                  + self.rect.w and player_group.sprites()[0].flag == "jumpedr" or
                  self.rect.x < player_group.sprites()[0].rect.x + 2 < self.rect.x + self.rect.w and
-                 player_group.sprites()[0].flag == "jumpedl"):
+                 player_group.sprites()[0].flag == "jumpedl") and\
+                player_group.sprites()[0].rect.y + player_group.sprites()[0].rect.h > self.rect.y + self.rect.h:
             self.rect = self.rect.move(0, -15)
             self.flag = "upper"
             return
@@ -396,6 +396,7 @@ class Mario(pygame.sprite.Sprite):
         self.base = y
         self.vx = 0
         self.vy = 0
+        self.prev_x = x
 
     def cut_sheet(self, sheet, columns, rows):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
@@ -407,7 +408,6 @@ class Mario(pygame.sprite.Sprite):
                     frame_location, self.rect.size)))
 
     def update(self, *args):
-        global running
         if pygame.sprite.spritecollideany(self, pygame.sprite.Group(objects_group.sprites()[-1])):
             self.flag = "end"
         if self.flag == "end":
