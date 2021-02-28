@@ -61,7 +61,9 @@ tile_images = {
     "mario_left_turn": pygame.transform.scale(load_image("turn_to_left.png"), (26, 32)),
     "mario_right_turn": pygame.transform.scale(load_image("turn_to_rigth.png"), (26, 32)),
     "mario_run": pygame.transform.scale(load_image("mario_run.png"), (204, 32)),
-
+    "stair_block": pygame.transform.scale(load_image('stair_block.png'), (32, 32)),
+    "used_block": pygame.transform.scale(load_image("used_block.png"), (32, 32)),
+    "flipping_coin": pygame.transform.scale(load_image("flipping_coin.png"), (64, 32))
 }
 
 
@@ -123,7 +125,7 @@ def drawing_map():
             elif s[0] == "p":
                 post = Object("post", int(s[1]), y - 336)
             elif s[0] == "f":
-                flag = Object("flag", int(s[1]), int(s[2]))
+                flag = Flag("flag", int(s[1]), int(s[2]))
             elif s[0] == "?":
                 question = Question(tile_images["? block"], 4, 1, int(s[1]), int(s[2]))
             elif s[0] == "k":
@@ -135,16 +137,19 @@ def drawing_map():
             elif s[0] == "mu":
                 mushroom = Mushroom(tile_images["mushroom"], 2, 1, int(s[1]), int(s[2]))
             elif s[0] == "mar":
-                mario = Mario(tile_images["mario_default"], tile_images["mario_run"], 6, 1, int(s[1]),
-                              y - 32)
+                mario = Mario(tile_images["mario_default"], tile_images["mario_run"], 6, 1, int(s[1]), y - 32)
+            elif s[0] == "sb":
+                stair_block = Object("stair_block", int(s[1]), int(s[2]) - 32, 0, 1)
     screen.fill((92, 148, 252))
-    while True:
+    while player_group.sprites()[0].rect.x < 3264 * 2:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
         screen.fill((92, 148, 252))
         enemy_group.update(event)
-        animated_group.update()
+        objects_group.update()
+        mario_bases_group.update()
+        # animated_group.update()
         untouchable_group.draw(screen)
         bases_group.draw(screen)
         objects_group.draw(screen)
@@ -168,16 +173,36 @@ class Object(pygame.sprite.Sprite):
             super().__init__(untouchable_group, all_sprites)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect().move(pos_x, pos_y)
+        self.flag = "default"
+        self.basey = pos_y
+
+    def update(self):
+        if pygame.sprite.spritecollideany(self, player_group) and player_group.sprites()[0].rect.y - 4 <= self.rect.y \
+                + 32 and self.flag == "default" and \
+                (self.rect.x < player_group.sprites()[0].rect.x + player_group.sprites()[0].rect.w - 2 < self.rect.x
+                 + self.rect.w and player_group.sprites()[0].flag == "jumpedr" or
+                 self.rect.x < player_group.sprites()[0].rect.x + 2 < self.rect.x + self.rect.w and
+                 player_group.sprites()[0].flag == "jumpedl"):
+            self.rect = self.rect.move(0, -15)
+            self.flag = "upper"
+            return
+        if self.flag == "upper":
+            if self.rect.y != self.basey:
+                self.rect = self.rect.move(0, 1.5)
+            else:
+                self.flag = "default"
 
 
-class Question(pygame.sprite.Sprite):
-    def __init__(self, sheet, columns, rows, x, y):
+class Coin(pygame.sprite.Sprite):
+    def __init__(self, x, y):
         super().__init__(all_sprites, animated_group, mario_bases_group)
         self.frames = []
-        self.cut_sheet(sheet, columns, rows)
+        self.cut_sheet(tile_images["flipping_coin"], 4, 1)
         self.cur_frame = 0
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
+        self.basey = y
+        self.flag = "up"
 
     def cut_sheet(self, sheet, columns, rows):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
@@ -193,6 +218,69 @@ class Question(pygame.sprite.Sprite):
             self.cur_frame = int(self.cur_frame % len(self.frames))
             self.image = self.frames[self.cur_frame]
         self.cur_frame += 1 / 8
+        if self.rect.y > self.basey - 64 and self.flag == "up":
+            self.rect = self.rect.move(0, -3)
+        else:
+            self.flag = "down"
+        if self.rect.y < self.basey and self.flag == "down":
+            self.rect = self.rect.move(0, 3)
+        if self.rect.y == self.basey and self.flag == "down":
+            self.kill()
+
+
+class Flag(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(objects_group, all_sprites)
+        self.image = tile_images[tile_type]
+        self.rect = self.image.get_rect().move(pos_x, pos_y)
+
+    def update(self):
+        if player_group.sprites()[0].rect.x + 32 >= 3168 * 2:
+            if self.rect.y < 176 * 2 - 32:
+                self.rect = self.rect.move(0, 5)
+
+
+class Question(pygame.sprite.Sprite):
+    def __init__(self, sheet, columns, rows, x, y):
+        super().__init__(all_sprites, animated_group, mario_bases_group)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+        self.rect = self.rect.move(x, y)
+        self.flag = "default"
+        self.basey = y
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self):
+        if self.cur_frame == round(self.cur_frame) and self.flag == "default":
+            self.cur_frame = int(self.cur_frame % len(self.frames))
+            self.image = self.frames[self.cur_frame]
+        self.cur_frame += 1 / 8
+        if pygame.sprite.spritecollideany(self, player_group) and player_group.sprites()[0].rect.y - 4 <= self.rect.y \
+                + 32 and self.flag == "default" and \
+                (self.rect.x < player_group.sprites()[0].rect.x + player_group.sprites()[0].rect.w - 2 < self.rect.x
+                 + self.rect.w and player_group.sprites()[0].flag == "jumpedr" or
+                 self.rect.x < player_group.sprites()[0].rect.x + 2 < self.rect.x + self.rect.w and
+                 player_group.sprites()[0].flag == "jumpedl"):
+            coin = Coin(self.rect.x + 8, self.rect.y - 32)
+            self.rect = self.rect.move(0, -15)
+            self.image = tile_images["used_block"]
+            self.flag = "upper"
+            return
+        if self.flag == "upper":
+            if self.rect.y != self.basey:
+                self.rect = self.rect.move(0, 1.5)
+            else:
+                self.flag = "used"
 
 
 class Mushroom(pygame.sprite.Sprite):
@@ -218,24 +306,27 @@ class Mushroom(pygame.sprite.Sprite):
                     frame_location, self.rect.size)))
 
     def update(self, *args):
-        if not pygame.sprite.spritecollideany(self, bases_group):
-            self.gravity = 10
-            self.v = 0
-        elif self.gravity:
-            self.gravity = 0
-            self.v = -20
-        self.cur_frame += 1 / 10
-        if int(round(self.cur_frame)) == int(self.cur_frame):
-            self.cur_frame = self.cur_frame % len(self.frames)
-        elif self.cur_frame <= len(self.frames):
-            self.image = self.frames[int(self.cur_frame)]
-        else:
-            self.image = self.frames[int(self.cur_frame) - 1]
-        if pygame.sprite.spritecollideany(self, objects_group):
-            self.v = -self.v
-            s = pygame.sprite.spritecollideany(self, objects_group)
-        self.rect.x += self.v / 60
-        self.rect.y += self.gravity / 2.5
+        if player_group.sprites()[0].rect.x + 1700 >= self.rect.x:
+            others = pygame.sprite.Group([i for i in enemy_group.sprites() if i.rect.x != self.rect.x])
+            if not pygame.sprite.spritecollideany(self, bases_group):
+                self.gravity = 10
+                self.v = 0
+            elif self.gravity:
+                self.gravity = 0
+                self.v = -20
+            self.cur_frame += 1 / 10
+            if int(round(self.cur_frame)) == int(self.cur_frame):
+                self.cur_frame = self.cur_frame % len(self.frames)
+            elif self.cur_frame <= len(self.frames):
+                self.image = self.frames[int(self.cur_frame)]
+            else:
+                self.image = self.frames[int(self.cur_frame) - 1]
+            if pygame.sprite.spritecollideany(self, objects_group):
+                self.v = -self.v
+            if pygame.sprite.spritecollideany(self, others):
+                self.v = -self.v
+            self.rect.x += self.v / 60
+            self.rect.y += self.gravity / 2.5
 
 
 class Turtle(pygame.sprite.Sprite):
@@ -261,30 +352,31 @@ class Turtle(pygame.sprite.Sprite):
                     frame_location, self.rect.size)))
 
     def update(self, *args):
-        if args and args[0].type == pygame.KEYDOWN and args[0].key == pygame.K_UP and self.isdead == 0:
-            self.image = pygame.transform.scale(load_image("death_turtle.png"), (56, 48))
-            self.start_ticks = pygame.time.get_ticks()
-            self.isdead = 1
-        if self.isdead == 1 and (pygame.time.get_ticks() - self.start_ticks) // 1000 == 3:
-            self.image = pygame.transform.scale(load_image("reborn_turtle.png"), (56, 48))
-            self.isdead = 2
-        if self.isdead == 2 and (pygame.time.get_ticks() - self.start_ticks) // 1000 == 4:
-            self.isdead = 0
-        elif not self.isdead:
-            if pygame.sprite.spritecollideany(self, objects_group):
-                self.v = -self.v
-            if not pygame.sprite.spritecollideany(self, bases_group):
-                self.gravity = 10
-            if self.v == 1:
-                self.cur_frame += 1 / 8
-                if self.cur_frame == round(self.cur_frame):
-                    self.image = self.frames[int(self.cur_frame) % 2 + 2]
-                self.rect = self.rect.move((self.v, self.gravity / 2.5))
-            else:
-                self.cur_frame += 1 / 8
-                if self.cur_frame == round(self.cur_frame):
-                    self.image = self.frames[int(self.cur_frame) % 2]
-                self.rect = self.rect.move((self.v, self.gravity / 2.5))
+        if player_group.sprites()[0].rect.x + 1664 >= self.rect.x:
+            if args and args[0].type == pygame.KEYDOWN and args[0].key == pygame.K_UP and self.isdead == 0:
+                self.image = pygame.transform.scale(load_image("death_turtle.png"), (56, 48))
+                self.start_ticks = pygame.time.get_ticks()
+                self.isdead = 1
+            if self.isdead == 1 and (pygame.time.get_ticks() - self.start_ticks) // 1000 == 3:
+                self.image = pygame.transform.scale(load_image("reborn_turtle.png"), (56, 48))
+                self.isdead = 2
+            if self.isdead == 2 and (pygame.time.get_ticks() - self.start_ticks) // 1000 == 4:
+                self.isdead = 0
+            elif not self.isdead:
+                if pygame.sprite.spritecollideany(self, objects_group):
+                    self.v = -self.v
+                if not pygame.sprite.spritecollideany(self, bases_group):
+                    self.gravity = 10
+                if self.v == 1:
+                    self.cur_frame += 1 / 8
+                    if self.cur_frame == round(self.cur_frame):
+                        self.image = self.frames[int(self.cur_frame) % 2 + 2]
+                    self.rect = self.rect.move((self.v, self.gravity / 2.5))
+                else:
+                    self.cur_frame += 1 / 8
+                    if self.cur_frame == round(self.cur_frame):
+                        self.image = self.frames[int(self.cur_frame) % 2]
+                    self.rect = self.rect.move((self.v, self.gravity / 2.5))
 
 
 class Mario(pygame.sprite.Sprite):
@@ -315,6 +407,16 @@ class Mario(pygame.sprite.Sprite):
                     frame_location, self.rect.size)))
 
     def update(self, *args):
+        global running
+        if pygame.sprite.spritecollideany(self, pygame.sprite.Group(objects_group.sprites()[-1])):
+            self.flag = "end"
+        if self.flag == "end":
+            self.start_ticks = 0
+            self.cur_frame += clock.tick() / 12
+            self.image = self.frames[int(self.cur_frame) % 3 + 3]
+            self.rect = self.rect.move(self.v, 0)
+        if self.flag == "end" and self.rect.x < 3264 * 2:
+            return
         if args and args[0].type == pygame.KEYUP and args[0].key == pygame.K_RIGHT and any(
                 map(lambda x: x == self.image, self.frames[3:])):
             self.image = marimg
